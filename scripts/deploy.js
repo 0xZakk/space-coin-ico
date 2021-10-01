@@ -19,17 +19,17 @@ async function main() {
 
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
-  const Token = await ethers.getContractFactory("Token");
-  const token = await Token.deploy();
-  await token.deployed();
+  const TokenCrowdsale = await ethers.getContractFactory("SpaceTokenICO");
+  const crowdsale = await TokenCrowdsale.deploy();
+  await crowdsale.deployed();
 
-  console.log("Token address:", token.address);
+  console.log("TokenCrowdsale address:", crowdsale.address);
 
   // We also save the contract's artifacts and address in the frontend directory
-  saveFrontendFiles(token);
+  saveFrontendFiles(crowdsale);
 }
 
-function saveFrontendFiles(token) {
+function saveFrontendFiles(crowdsale) {
   const fs = require("fs");
   const contractsDir = __dirname + "/../frontend/src/contracts";
 
@@ -39,14 +39,14 @@ function saveFrontendFiles(token) {
 
   fs.writeFileSync(
     contractsDir + "/contract-address.json",
-    JSON.stringify({ Token: token.address }, undefined, 2)
+    JSON.stringify({ TokenCrowdsale: crowdsale.address }, undefined, 2)
   );
 
-  const TokenArtifact = artifacts.readArtifactSync("Token");
+  const CrowdsaleArtifacts = artifacts.readArtifactSync("SpaceTokenICO");
 
   fs.writeFileSync(
-    contractsDir + "/Token.json",
-    JSON.stringify(TokenArtifact, null, 2)
+    contractsDir + "/Crowdsale.json",
+    JSON.stringify(CrowdsaleArtifacts, null, 2)
   );
 }
 

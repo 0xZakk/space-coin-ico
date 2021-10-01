@@ -6,7 +6,10 @@
     "test": "test"
   },
   "scripts": {
-    "test": "hardhat test"
+    "build": "waffle",
+    "test": "hardhat test",
+    "test:watch": "nodemon -x 'npx hardhat test' -w contracts -w test -e js,sol",
+    "deploy": "npx hardhat run scripts/deploy.js --network localhost"
   },
   "repository": {
     "type": "git",
@@ -21,6 +24,10 @@
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/nomiclabs/hardhat-hackathon-boilerplate/issues"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.3.2",
+    "nodemon": "^2.0.12"
   },
   "homepage": "https://github.com/nomiclabs/hardhat-hackathon-boilerplate#readme",
   "devDependencies": {
