@@ -1,5 +1,4 @@
 //SPDX-License-Identifier: UNLICENSED
-
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
@@ -13,6 +12,7 @@ import { SpaceToken } from "./Token.sol";
  * The SpaceTokenICO contract does this and that...
  */
 contract SpaceTokenICO is Ownable, Pausable {
+  uint public balance;
   uint constant SEED_MAX_INDIVIDUAL_CONTRIBUTION = 1500 ether;
   uint constant GENERAL_MAX_INDIVIDUAL_CONTRIBUTION = 1000 ether;
   uint constant SEED_PHASE_CONTRIBUTION_LIMIT = 15000 ether;
@@ -20,6 +20,8 @@ contract SpaceTokenICO is Ownable, Pausable {
   SpaceToken public tokenAddress;
   mapping(address => bool) public investorWhitelist;
   mapping(address => uint) public investorContributions;
+  mapping(Phase => mapping(address => uint)) public investorContributionsByPhase;
+
   enum Phase {
     SEED,
     GENERAL,
@@ -36,11 +38,11 @@ contract SpaceTokenICO is Ownable, Pausable {
 
   modifier belowMaxContribution() { 
     if(currentPhase == Phase.SEED) {
-      require (msg.value <= SEED_MAX_INDIVIDUAL_CONTRIBUTION, "INVALID_CONTRIBUTION:Contribution too large."); 
+      require ((msg.value + investorContributionsByPhase[currentPhase][msg.sender]) <= SEED_MAX_INDIVIDUAL_CONTRIBUTION, "INVALID_CONTRIBUTION:Contribution too large."); 
     } else if (currentPhase == Phase.GENERAL) {
-      require (msg.value <= GENERAL_MAX_INDIVIDUAL_CONTRIBUTION, "INVALID_CONTRIBUTION:Contribution too large."); 
+      require ((msg.value + investorContributionsByPhase[currentPhase][msg.sender]) <= GENERAL_MAX_INDIVIDUAL_CONTRIBUTION, "INVALID_CONTRIBUTION:Contribution too large."); 
     }
-    _; 
+    _;
   }
 
   // modifier onlyDuringPhase(Phase _phase) { 
@@ -49,36 +51,37 @@ contract SpaceTokenICO is Ownable, Pausable {
   // }
   
   
-  constructor() {
-    tokenAddress = new SpaceToken();
+  constructor() {}
+
+  function setTokenAddress(SpaceToken _spaceToken) external {
+    require(address(tokenAddress) == address(0x0), "WRITE_ONCE");
+    tokenAddress = _spaceToken;
   }
 
   function invest () external payable whenNotPaused onlyWhitelistedInvestors belowMaxContribution {
+    balance += msg.value;
     investorContributions[msg.sender] += msg.value;
+    investorContributionsByPhase[currentPhase][msg.sender] += msg.value;
 
-    if (currentPhase == Phase.SEED && _getBalance() >= SEED_PHASE_CONTRIBUTION_LIMIT) {
+    if (currentPhase == Phase.SEED && getBalance() >= SEED_PHASE_CONTRIBUTION_LIMIT) {
       _pause();
-    } else if (currentPhase == Phase.GENERAL && _getBalance() >= GENERAL_PHASE_CONTRIBUTION_LIMIT) {
+    } else if (currentPhase == Phase.GENERAL && getBalance() >= GENERAL_PHASE_CONTRIBUTION_LIMIT) {
       _pause();
     }
   }
 
-  function withdraw () external {
-    require(investorContributions[msg.sender] > 0);
-    require(currentPhase == Phase.OPEN);
+  function claim () external {
+    require(investorContributions[msg.sender] > 0, "DID_NOT_PARTICIPATE");
+    require(currentPhase == Phase.OPEN, "NOT_OPEN");
 
-    uint balance = investorContributions[msg.sender];
+    uint contribution = investorContributions[msg.sender];
     investorContributions[msg.sender] = 0;
 
-    tokenAddress.transfer(msg.sender, 500);
+    tokenAddress.transfer(msg.sender, contribution * 5);
   }
 
-  function _getBalance () internal view returns (uint balance) {
-    return uint(address(this).balance);
-  }
-  
-  function getBalance () external view returns(uint balance) {
-    return _getBalance();
+  function getBalance () public view returns(uint) {
+    return balance;
   }
 
   function getContribution (address investorAddress) external view returns(uint contributionAmount) {
